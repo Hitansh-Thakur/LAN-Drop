@@ -1,0 +1,1 @@
+{"name":"securelan","version":"1.0.0","private":true,"scripts":{"start":"npm --prefix server start","install-all":"npm --prefix server install"}}

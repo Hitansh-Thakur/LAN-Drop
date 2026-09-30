@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SecureLAN</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <h1>SecureLAN</h1>
+      <p>Secure peer-to-peer sharing on your local network.</p>
+      <div id="status" class="status">Connecting...</div>
+    </header>
+
+    <section class="card">
+      <h2>Devices on this network</h2>
+      <div id="devices" class="devices"><p class="muted">No devices found.</p></div>
+    </section>
+
+    <section class="card">
+      <h2>Send a file</h2>
+      <div class="row">
+        <input id="fileInput" type="file">
+        <button id="sendFile" disabled>Send file</button>
+      </div>
+      <p id="fileInfo" class="muted">Select a device and a file.</p>
+    </section>
+
+    <section class="card">
+      <h2>Shared Clipboard</h2>
+      <textarea id="textInput" placeholder="Paste or type text here..."></textarea>
+      <div class="row right">
+        <button id="copyText">Copy</button>
+        <button id="sendText" disabled>Send text</button>
+        <button id="sendClip" disabled>Send clipboard</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Transfer</h2>
+      <div id="transfer">Idle</div>
+      <progress id="progress" value="0" max="100"></progress>
+    </section>
+
+
+    <footer>WebRTC DataChannel • SHA-256 integrity verification</footer>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
