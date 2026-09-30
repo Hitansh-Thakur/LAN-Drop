@@ -8,7 +8,7 @@ const NOUNS = ["Mango", "Avocado", "Broccoli", "Pineapple", "Otter", "Lemon", "F
 const generateDeviceName = () => `${ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)]} ${NOUNS[Math.floor(Math.random() * NOUNS.length)]}`;
 
 const generateId = () => (window.crypto && crypto.randomUUID && crypto.randomUUID()) || Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
-const state = { id: generateId(), name: generateDeviceName(), ws: null, peers: [], selected: null, pc: null, dc: null, pending: new Map(), incoming: null };
+const state = { id: generateId(), name: generateDeviceName(), ws: null, peers: [], selected: new Set(), connections: new Map() };
 
 
 $('fileInput').addEventListener('change', () => {
@@ -35,7 +35,30 @@ $('copyText').onclick = async () => {
 };
 
 function setStatus(s) { $('status').textContent = s; }
-function setTransfer(s) { $('transfer').textContent = s; }
+function setTransfer(s) { 
+  let el = $('sys-msg');
+  if (!el) {
+    el = document.createElement('div'); el.id = 'sys-msg'; el.className = 'muted';
+    const box = $('transfers'); if (box.innerHTML.includes('Idle')) box.innerHTML = '';
+    box.appendChild(el);
+  }
+  el.textContent = s; 
+}
+
+function updateTransfer(id, label, progress) {
+  const box = $('transfers');
+  if (box.innerHTML.includes('Idle')) box.innerHTML = '';
+  let el = $(`tx-${id}`);
+  if (!el) {
+    el = document.createElement('div'); el.id = `tx-${id}`;
+    el.innerHTML = `<div style="display:flex; justify-content:space-between; font-weight:bold; margin-bottom:4px;"><span></span><span></span></div><progress value="0" max="100"></progress>`;
+    box.appendChild(el);
+  }
+  const spans = el.querySelectorAll('span');
+  spans[0].textContent = label; spans[1].textContent = `${Math.round(progress)}%`;
+  el.querySelector('progress').value = progress;
+  if (progress >= 100) setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); if (!box.children.length) box.innerHTML = '<p class="muted">Idle</p>'; }, 3000);
+}
 function formatSize(n) { const u = ['B','KB','MB','GB']; let i=0; while(n>=1024 && i<u.length-1){n/=1024;i++;} return `${n.toFixed(i?1:0)} ${u[i]}`; }
 function sendSignal(to, data) { state.ws?.send(JSON.stringify({ type: 'signal', to, data })); }
 
@@ -57,60 +80,80 @@ function connectSignal() {
 
 function renderPeers(peers) {
   state.peers = peers.filter(p => p.id !== state.id);
+  for (const id of state.selected) {
+    if (!state.peers.find(p => p.id === id)) state.selected.delete(id);
+  }
   const box = $('devices'); box.innerHTML = '';
   if (!state.peers.length) { box.innerHTML = '<p class="muted">No other SecureLAN devices online.</p>'; return; }
   for (const p of state.peers) {
-    const el = document.createElement('div'); el.className = `device ${state.selected === p.id ? 'selected' : ''}`;
-    el.innerHTML = `<span>🟢 ${escapeHtml(p.name)}</span><button>Select</button>`;
+    const el = document.createElement('div'); el.className = `device ${state.selected.has(p.id) ? 'selected' : ''}`;
+    el.innerHTML = `<span>🟢 ${escapeHtml(p.name)}</span><button>${state.selected.has(p.id) ? 'Deselect' : 'Select'}</button>`;
     el.querySelector('button').onclick = () => selectPeer(p.id);
     box.appendChild(el);
   }
 }
 function selectPeer(id) {
-  state.selected = id;
+  if (state.selected.has(id)) state.selected.delete(id);
+  else state.selected.add(id);
   renderPeers(state.peers);
-  $('sendFile').disabled = false; $('sendText').disabled = false; $('sendClip').disabled = !navigator.clipboard;
-  setTransfer(`Selected ${state.peers.find(p => p.id === id)?.name || 'device'}`);
+  const disabled = state.selected.size === 0;
+  $('sendFile').disabled = disabled; $('sendText').disabled = disabled; $('sendClip').disabled = disabled || !navigator.clipboard;
+  setTransfer(state.selected.size ? `Selected ${state.selected.size} device(s)` : 'Idle');
+}
+
+function getConnection(peerId) {
+  if (!state.connections.has(peerId)) {
+    state.connections.set(peerId, { pc: null, dc: null, incoming: null });
+  }
+  return state.connections.get(peerId);
 }
 
 async function createConnection(peerId, offerer) {
-  if (state.pc) state.pc.close();
-  state.pc = new RTCPeerConnection({ iceServers: [] });
-  state.pc.onicecandidate = e => { if (e.candidate) sendSignal(peerId, { kind: 'candidate', candidate: e.candidate }); };
-  state.pc.onconnectionstatechange = () => setTransfer(`WebRTC: ${state.pc.connectionState}`);
-  state.pc.ondatachannel = e => setupChannel(e.channel);
+  const conn = getConnection(peerId);
+  if (conn.pc) conn.pc.close();
+  conn.pc = new RTCPeerConnection({ iceServers: [] });
+  conn.pc.onicecandidate = e => { if (e.candidate) sendSignal(peerId, { kind: 'candidate', candidate: e.candidate }); };
+  conn.pc.onconnectionstatechange = () => setTransfer(`WebRTC: ${conn.pc.connectionState}`);
+  conn.pc.ondatachannel = e => setupChannel(conn, e.channel, peerId);
   if (offerer) {
-    state.dc = state.pc.createDataChannel('securelan', { ordered: true }); setupChannel(state.dc);
-    const offer = await state.pc.createOffer(); await state.pc.setLocalDescription(offer);
-    sendSignal(peerId, { kind: 'offer', sdp: state.pc.localDescription });
+    conn.dc = conn.pc.createDataChannel('securelan', { ordered: true }); setupChannel(conn, conn.dc, peerId);
+    const offer = await conn.pc.createOffer(); await conn.pc.setLocalDescription(offer);
+    sendSignal(peerId, { kind: 'offer', sdp: conn.pc.localDescription });
   }
 }
-function setupChannel(dc) {
-  state.dc = dc; dc.binaryType = 'arraybuffer';
+function setupChannel(conn, dc, peerId) {
+  conn.dc = dc; dc.binaryType = 'arraybuffer';
   dc.onopen = () => setTransfer('Secure WebRTC channel ready');
   dc.onclose = () => setTransfer('WebRTC channel closed');
   dc.onerror = () => setTransfer('WebRTC channel error');
-  dc.onmessage = e => handleData(e.data);
+  dc.onmessage = e => handleData(conn, e.data, peerId);
 }
 async function ensureChannel(peerId) {
-  if (state.dc?.readyState === 'open') return state.dc;
+  const conn = getConnection(peerId);
+  if (conn.dc?.readyState === 'open') return conn.dc;
   await createConnection(peerId, true);
   return new Promise((resolve, reject) => {
-    const t = setInterval(() => { if (state.dc?.readyState === 'open') { clearInterval(t); resolve(state.dc); } }, 50);
+    const t = setInterval(() => { if (conn.dc?.readyState === 'open') { clearInterval(t); resolve(conn.dc); } }, 50);
     setTimeout(() => { clearInterval(t); reject(new Error('WebRTC connection timeout')); }, 15000);
   });
 }
 async function handleSignal(from, data) {
-  if (!state.pc || state.selected !== from) {
-    selectPeer(from);
+  const conn = getConnection(from);
+  if (!conn.pc) {
     await createConnection(from, false);
   }
   if (data.kind === 'offer') {
-    await state.pc.setRemoteDescription(data.sdp);
-    const ans = await state.pc.createAnswer(); await state.pc.setLocalDescription(ans);
-    sendSignal(from, { kind: 'answer', sdp: state.pc.localDescription });
-  } else if (data.kind === 'answer') await state.pc.setRemoteDescription(data.sdp);
-  else if (data.kind === 'candidate') { try { await state.pc.addIceCandidate(data.candidate); } catch {} }
+    if (conn.pc.signalingState !== 'stable') {
+      if (state.id > from) return; // Impolite, ignore
+      await Promise.all([conn.pc.setLocalDescription({type: 'rollback'}), conn.pc.setRemoteDescription(data.sdp)]);
+    } else {
+      await conn.pc.setRemoteDescription(data.sdp);
+    }
+    const ans = await conn.pc.createAnswer(); await conn.pc.setLocalDescription(ans);
+    sendSignal(from, { kind: 'answer', sdp: conn.pc.localDescription });
+  } else if (data.kind === 'answer') {
+    if (conn.pc.signalingState !== 'stable') await conn.pc.setRemoteDescription(data.sdp);
+  } else if (data.kind === 'candidate') { try { await conn.pc.addIceCandidate(data.candidate); } catch {} }
 }
 
 async function compressData(data) {
@@ -156,38 +199,51 @@ async function sha256(data) {
 }
 
 async function sendPayload(data, meta) {
-  if (!state.selected) return setTransfer('Select a device first');
-  let dc; try { dc = await ensureChannel(state.selected); } catch(e) { return setTransfer(e.message); }
+  if (state.selected.size === 0) return setTransfer('Select a device first');
   const hash = await sha256(data);
-  const id = generateId();
-  dc.send(JSON.stringify({ type: 'start', id, meta: { ...meta, hash, size: data.byteLength } }));
-  const chunk = 16 * 1024;
-  let sent = 0;
-  while (sent < data.byteLength) {
-    while (dc.bufferedAmount > 4 * 1024 * 1024) await new Promise(r => setTimeout(r, 20));
-    const part = data.slice(sent, Math.min(sent + chunk, data.byteLength));
-    dc.send(part); sent += part.byteLength;
-    $('progress').value = data.byteLength ? sent / data.byteLength * 100 : 100;
-    setTransfer(`Sending ${meta.name} • ${Math.round(sent / data.byteLength * 100)}%`);
-  }
-  dc.send(JSON.stringify({ type: 'end', id }));
+  const selectedPeers = Array.from(state.selected);
+  setTransfer(`Sending to ${selectedPeers.length} peer(s)...`);
+  
+  await Promise.all(selectedPeers.map(async peerId => {
+    try {
+      const txId = generateId();
+      const dc = await ensureChannel(peerId);
+      dc.send(JSON.stringify({ type: 'start', id: txId, meta: { ...meta, hash, size: data.byteLength } }));
+      const chunk = 16 * 1024;
+      let sent = 0;
+      while (sent < data.byteLength) {
+        while (dc.bufferedAmount > 4 * 1024 * 1024) await new Promise(r => setTimeout(r, 20));
+        const part = data.slice(sent, Math.min(sent + chunk, data.byteLength));
+        dc.send(part); sent += part.byteLength;
+        updateTransfer(txId, `Sending ${meta.name}`, data.byteLength ? sent / data.byteLength * 100 : 100);
+      }
+      dc.send(JSON.stringify({ type: 'end', id: txId }));
+    } catch(e) {
+      console.error(`Failed to send to ${peerId}:`, e);
+    }
+  }));
   setTransfer(`Sent ${meta.name}` + (hash === 'no-hash' ? '' : ` • SHA-256 ${hash.slice(0, 16)}…`));
 }
 
-function handleData(raw) {
+function handleData(conn, raw, peerId) {
   if (typeof raw === 'string') {
     const msg = JSON.parse(raw);
-    if (msg.type === 'start') state.incoming = { id: msg.id, meta: msg.meta, parts: [], size: 0 };
-    if (msg.type === 'end' && state.incoming?.id === msg.id) finishIncoming();
+    if (msg.type === 'start') conn.incoming = { id: msg.id, meta: msg.meta, parts: [], size: 0 };
+    if (msg.type === 'end' && conn.incoming?.id === msg.id) finishIncoming(conn, peerId);
     return;
   }
-  if (state.incoming) { state.incoming.parts.push(new Uint8Array(raw)); state.incoming.size += raw.byteLength; $('progress').value = state.incoming.meta.size ? state.incoming.size / state.incoming.meta.size * 100 : 0; setTransfer(`Receiving ${state.incoming.meta.name} • ${Math.round($('progress').value)}%`); }
+  if (conn.incoming) { 
+    conn.incoming.parts.push(new Uint8Array(raw)); 
+    conn.incoming.size += raw.byteLength; 
+    const pct = conn.incoming.meta.size ? conn.incoming.size / conn.incoming.meta.size * 100 : 0;
+    updateTransfer(conn.incoming.id, `Receiving ${conn.incoming.meta.name}`, pct);
+  }
 }
-async function finishIncoming() {
-  const x = state.incoming; state.incoming = null;
+async function finishIncoming(conn, peerId) {
+  const x = conn.incoming; conn.incoming = null;
   let data = concat(x.parts, x.size); const hash = await sha256(data);
   const ok = hash === x.meta.hash || hash === 'no-hash' || x.meta.hash === 'no-hash';
-  $('progress').value = 100;
+  updateTransfer(x.id, `Received ${x.meta.name}`, 100);
   if (!ok) { setTransfer(`✗ Integrity check failed for ${x.meta.name}`); return; }
   
   if (x.meta.compressed === 'gzip' && window.DecompressionStream) {
