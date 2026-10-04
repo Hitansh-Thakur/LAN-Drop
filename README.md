@@ -18,6 +18,10 @@ The MVP supports:
 - Progress reporting
 - No database and no cloud storage
 
+## Screen Shot
+
+![ScreenShot](./ScreenShot.png)
+
 ## Security model
 
 WebRTC DataChannels are encrypted by WebRTC's transport security mechanisms. LANDrop does not implement its own AES, RSA, or ECDH layer in this MVP. This avoids custom cryptography and keeps the project focused on secure peer-to-peer networking.
