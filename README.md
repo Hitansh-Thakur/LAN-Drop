@@ -52,7 +52,6 @@ securelan/
 ├── server/
 │   ├── server.js
 │   └── package.json
-├── shared/
 ├── package.json
 ├── .gitignore
 └── README.md
