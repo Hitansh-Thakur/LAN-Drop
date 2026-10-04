@@ -1,12 +1,12 @@
 # LANDrop
 
-A simple peer-to-peer LAN sharing MVP for files, pasted text, and clipboard content.
+A simple peer-to-peer LAN sharing  for files, pasted text, and clipboard content.
 
 ## What it does
 
 LANDrop discovers other LANDrop instances through a small WebSocket signaling service. Once two browsers connect, the actual payload is sent through a WebRTC DataChannel rather than through the signaling server.
 
-The MVP supports:
+The  supports:
 
 - LAN peer discovery through the signaling server
 - Selecting a peer
@@ -24,11 +24,11 @@ The MVP supports:
 
 ## Security model
 
-WebRTC DataChannels are encrypted by WebRTC's transport security mechanisms. LANDrop does not implement its own AES, RSA, or ECDH layer in this MVP. This avoids custom cryptography and keeps the project focused on secure peer-to-peer networking.
+WebRTC DataChannels are encrypted by WebRTC's transport security mechanisms. LANDrop does not implement its own AES, RSA, or ECDH layer in this . This avoids custom cryptography and keeps the project focused on secure peer-to-peer networking.
 
 SHA-256 is calculated on the original payload before sending and again after receiving. A transfer is accepted only when the hashes match.
 
-Important limitation: this MVP does not authenticate device identities. The signaling server is trusted to relay signaling messages, and the application does not implement a separate identity/signature layer to prevent a signaling-level man-in-the-middle attack. Treat authentication as a future version feature.
+Important limitation: this  does not authenticate device identities. The signaling server is trusted to relay signaling messages, and the application does not implement a separate identity/signature layer to prevent a signaling-level man-in-the-middle attack. Treat authentication as a future version feature.
 
 ## Architecture
 
@@ -189,7 +189,7 @@ Transfer end:
 
 HTTP and WebSocket can both transfer files, but WebRTC DataChannel is a natural fit for a LocalSend-like peer-to-peer application. The signaling server is used only to establish the connection. Once the DataChannel is established, the application sends the payload directly through the WebRTC peer connection when the network permits direct connectivity.
 
-WebRTC can use ICE, STUN, and TURN in more general Internet deployments. This MVP uses an empty `iceServers` configuration because the target environment is a shared LAN. For Internet-wide use, ICE/STUN/TURN configuration would need to be added.
+WebRTC can use ICE, STUN, and TURN in more general Internet deployments. This  uses an empty `iceServers` configuration because the target environment is a shared LAN. For Internet-wide use, ICE/STUN/TURN configuration would need to be added.
 
 ## Why SHA-256?
 
@@ -207,7 +207,7 @@ sender hash == receiver hash
 
 If the hashes differ, LANDrop reports an integrity failure and does not save/display the received payload.
 
-## Important MVP limitations
+## Important  limitations
 
 - No device authentication
 - No persistent device identity
