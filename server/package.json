@@ -1,1 +1,1 @@
-{"name":"securelan-server","version":"1.0.0","type":"module","scripts":{"start":"node server.js"},"dependencies":{"ws":"^8.18.3"}}
+{"name":"LANDrop-server","version":"1.0.0","type":"module","scripts":{"start":"node server.js"},"dependencies":{"ws":"^8.18.3"}}

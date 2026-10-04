@@ -1,22 +1,26 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SecureLAN</title>
+  <title>LANDrop</title>
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
   <main class="wrap">
     <header>
-      <h1>SecureLAN</h1>
+      <h1>LAN Drop</h1>
       <p>Secure peer-to-peer sharing on your local network.</p>
       <div id="status" class="status">Connecting...</div>
     </header>
 
     <section class="card">
       <h2>Devices on this network</h2>
-      <div id="devices" class="devices"><p class="muted">No devices found.</p></div>
+      <div id="devices" class="devices">
+        <p class="muted">No devices found.</p>
+      </div>
     </section>
 
     <section class="card">
@@ -40,12 +44,15 @@
 
     <section class="card">
       <h2>Transfers</h2>
-      <div id="transfers" class="transfers"><p class="muted">Idle</p></div>
+      <div id="transfers" class="transfers">
+        <p class="muted">Idle</p>
+      </div>
     </section>
 
 
-    <footer>WebRTC DataChannel • SHA-256 integrity verification</footer>
+    <footer>By Hitansh, Dhruv, Kashyap</footer>
   </main>
   <script src="app.js"></script>
 </body>
+
 </html>

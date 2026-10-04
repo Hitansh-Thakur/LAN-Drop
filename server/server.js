@@ -111,6 +111,6 @@ const interval = setInterval(() => {
 }, 15000);
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`SecureLAN signaling server: http://0.0.0.0:${PORT}`);
+  console.log(`LANDrop signaling server: http://0.0.0.0:${PORT}`);
   console.log('LAN addresses:', Object.values(os.networkInterfaces()).flat().filter(x => x?.family === 'IPv4' && !x.internal).map(x => x.address));
 });

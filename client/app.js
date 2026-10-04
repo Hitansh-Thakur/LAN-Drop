@@ -84,7 +84,7 @@ function renderPeers(peers) {
     if (!state.peers.find(p => p.id === id)) state.selected.delete(id);
   }
   const box = $('devices'); box.innerHTML = '';
-  if (!state.peers.length) { box.innerHTML = '<p class="muted">No other SecureLAN devices online.</p>'; return; }
+  if (!state.peers.length) { box.innerHTML = '<p class="muted">No other LANDrop devices online.</p>'; return; }
   for (const p of state.peers) {
     const el = document.createElement('div'); el.className = `device ${state.selected.has(p.id) ? 'selected' : ''}`;
     el.innerHTML = `<span>🟢 ${escapeHtml(p.name)}</span><button>${state.selected.has(p.id) ? 'Deselect' : 'Select'}</button>`;
@@ -116,7 +116,7 @@ async function createConnection(peerId, offerer) {
   conn.pc.onconnectionstatechange = () => setTransfer(`WebRTC: ${conn.pc.connectionState}`);
   conn.pc.ondatachannel = e => setupChannel(conn, e.channel, peerId);
   if (offerer) {
-    conn.dc = conn.pc.createDataChannel('securelan', { ordered: true }); setupChannel(conn, conn.dc, peerId);
+    conn.dc = conn.pc.createDataChannel('LANDrop', { ordered: true }); setupChannel(conn, conn.dc, peerId);
     const offer = await conn.pc.createOffer(); await conn.pc.setLocalDescription(offer);
     sendSignal(peerId, { kind: 'offer', sdp: conn.pc.localDescription });
   }

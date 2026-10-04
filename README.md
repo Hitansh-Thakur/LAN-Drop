@@ -1,10 +1,10 @@
-# SecureLAN
+# LANDrop
 
 A simple peer-to-peer LAN sharing MVP for files, pasted text, and clipboard content.
 
 ## What it does
 
-SecureLAN discovers other SecureLAN instances through a small WebSocket signaling service. Once two browsers connect, the actual payload is sent through a WebRTC DataChannel rather than through the signaling server.
+LANDrop discovers other LANDrop instances through a small WebSocket signaling service. Once two browsers connect, the actual payload is sent through a WebRTC DataChannel rather than through the signaling server.
 
 The MVP supports:
 
@@ -20,7 +20,7 @@ The MVP supports:
 
 ## Security model
 
-WebRTC DataChannels are encrypted by WebRTC's transport security mechanisms. SecureLAN does not implement its own AES, RSA, or ECDH layer in this MVP. This avoids custom cryptography and keeps the project focused on secure peer-to-peer networking.
+WebRTC DataChannels are encrypted by WebRTC's transport security mechanisms. LANDrop does not implement its own AES, RSA, or ECDH layer in this MVP. This avoids custom cryptography and keeps the project focused on secure peer-to-peer networking.
 
 SHA-256 is calculated on the original payload before sending and again after receiving. A transfer is accepted only when the hashes match.
 
@@ -44,7 +44,7 @@ The Node.js server does not receive the file payload in the intended flow. It ma
 ## Project structure
 
 ```text
-securelan/
+LANDrop/
 ├── client/
 │   ├── index.html
 │   ├── style.css
@@ -77,7 +77,7 @@ The server listens on port `3000` on all network interfaces.
 It will print LAN addresses such as:
 
 ```text
-SecureLAN signaling server: http://0.0.0.0:3000
+LANDrop signaling server: http://0.0.0.0:3000
 LAN addresses: [ '192.168.1.20' ]
 ```
 
@@ -112,7 +112,7 @@ the client connects to:
 ws://192.168.1.20:3000
 ```
 
-## Using SecureLAN
+## Using LANDrop
 
 1. Start the signaling server on one PC.
 2. Start the static client server on that PC.
@@ -121,7 +121,7 @@ ws://192.168.1.20:3000
 5. Other online devices appear in the device list.
 6. Select a destination device.
 7. Choose a file or enter text.
-8. SecureLAN establishes a WebRTC DataChannel.
+8. LANDrop establishes a WebRTC DataChannel.
 9. The payload is streamed in chunks.
 10. The receiver calculates SHA-256 and compares it with the sender's hash.
 11. A verified file is downloaded automatically; verified text is displayed in the Received section.
@@ -201,7 +201,7 @@ sender hash == receiver hash
         +---- transfer integrity verified
 ```
 
-If the hashes differ, SecureLAN reports an integrity failure and does not save/display the received payload.
+If the hashes differ, LANDrop reports an integrity failure and does not save/display the received payload.
 
 ## Important MVP limitations
 
